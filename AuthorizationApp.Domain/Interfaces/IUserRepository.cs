@@ -1,4 +1,4 @@
-﻿using AuthorizationApp.Domain.Models;
+﻿using AuthorizationApp.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,16 +14,16 @@ namespace AuthorizationApp.Domain.Interfaces
     /// </summary>
     public interface IUserRepository
     {
-        Task AddAsync(User user);
+        Task<int> AddAsync(User user);
 
-        Task<User> GetByIdAsync(int id);
+        Task<User?> GetByIdAsync(int id);
 
-        Task<User> GetByEmailAsync(string email);
+        Task<User?> GetByEmailAsync(string email);
 
         Task<IEnumerable<User>> GetAllAsync();
 
-        Task UpdateAsync(User user);
+        Task<bool> UpdateAsync(int id, User user);
 
-        Task DeleteAsync(int id);
+        Task<bool> DeleteAsync(int id);
     }
 }
