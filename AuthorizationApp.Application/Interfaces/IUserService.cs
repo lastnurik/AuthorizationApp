@@ -18,6 +18,8 @@ namespace AuthorizationApp.Application.Interfaces
         /// <returns>A Task representing the asynchronous operation, returning an enumerable collection of UserDto.</returns>
         Task<IEnumerable<UserDto>> GetUsersAsync(GetUsersQuery query);
 
+        Task<UserDto> GetUserByIdAsync(int userId);
+
         /// <summary>
         /// Blocks one or more users asynchronously.
         /// </summary>

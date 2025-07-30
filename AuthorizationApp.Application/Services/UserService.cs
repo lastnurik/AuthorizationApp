@@ -42,6 +42,21 @@ namespace AuthorizationApp.Application.Services
             }
         }
 
+        public async Task<UserDto> GetUserByIdAsync(int userId)
+        {
+            var user = await this.userRepository.GetByIdAsync(userId);
+
+            return new UserDto 
+            {
+                Id = user.Id,
+                Name = user.Name,
+                Email = user.Email,
+                IsBlocked = user.IsBlocked,
+                LastLogin = user.LastLogin,
+            };
+
+        }
+
         public async Task<IEnumerable<UserDto>> GetUsersAsync(GetUsersQuery query)
         {
             var users = (await this.userRepository.GetAllAsync()).AsQueryable();

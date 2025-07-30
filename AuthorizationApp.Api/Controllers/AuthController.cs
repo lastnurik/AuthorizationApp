@@ -5,6 +5,7 @@ using AuthorizationApp.Application.Queries;
 using AuthorizationApp.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace AuthorizationApp.Api.Controllers
 {
@@ -13,10 +14,12 @@ namespace AuthorizationApp.Api.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService authService;
+        private readonly IUserService userService;
 
-        public AuthController(IAuthService authService)
+        public AuthController(IAuthService authService, IUserService userService)
         {
             this.authService = authService ?? throw new ArgumentNullException(nameof(authService));
+            this.userService = userService ?? throw new ArgumentNullException(nameof(userService));
         }
 
         [HttpPost("register")]
@@ -57,6 +60,27 @@ namespace AuthorizationApp.Api.Controllers
             }
 
             return Ok(loginResponse);
+        }
+
+        [HttpGet("me")]
+        [Authorize]
+        public async Task<IActionResult> GetCurrentUserProfile()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return Unauthorized(new { message = "User ID not found in token" });
+            }
+
+            var userDto = await this.userService.GetUserByIdAsync(userId);
+
+            if (userDto == null)
+            {
+                return NotFound(new { message = "User not found" });
+            }
+
+            return Ok(userDto);
         }
     }
 }
