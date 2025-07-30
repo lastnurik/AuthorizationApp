@@ -1,4 +1,5 @@
-﻿using AuthorizationApp.Application.DTO;
+﻿using AuthorizationApp.Application.Commands;
+using AuthorizationApp.Application.DTO;
 using AuthorizationApp.Application.Interfaces;
 using AuthorizationApp.Domain.Entities;
 using AuthorizationApp.Domain.Interfaces;
@@ -23,7 +24,7 @@ namespace AuthorizationApp.Application.Services
             this.jwtTokenGenerator = jwtTokenGenerator ?? throw new ArgumentNullException(nameof(jwtTokenGenerator));
         }
 
-        public async Task<UserLoginResponseDto?> LoginAsync(UserLoginDto userLogin)
+        public async Task<UserLoginResponseDto?> LoginAsync(LoginUserCommand userLogin)
         {
             var user = await this.userRepository.GetByEmailAsync(userLogin.Email);
 
@@ -59,7 +60,7 @@ namespace AuthorizationApp.Application.Services
             };
         }
 
-        public async Task<UserDto?> RegisterAsync(UserRegistrationDto userRegistration)
+        public async Task<UserDto?> RegisterAsync(RegisterUserCommand userRegistration)
         {
             var existingUser = await this.userRepository.GetByEmailAsync(userRegistration.Email);
 
@@ -70,7 +71,7 @@ namespace AuthorizationApp.Application.Services
 
             var hashedPassword = this.passwordHasher.HashPassword(userRegistration.Password);
 
-            var newUser = new User(hashedPassword, userRegistration.Name, userRegistration.Email);
+            var newUser = new User(userRegistration.Name, userRegistration.Email, hashedPassword);
 
             await this.userRepository.AddAsync(newUser);
 

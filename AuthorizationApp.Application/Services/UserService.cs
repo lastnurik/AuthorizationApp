@@ -44,12 +44,13 @@ namespace AuthorizationApp.Application.Services
 
         public async Task<IEnumerable<UserDto>> GetUsersAsync(GetUsersQuery query)
         {
-            var users = await this.userRepository.GetAllAsync();
+            var users = (await this.userRepository.GetAllAsync()).AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(query.SearchTerm))
             {
-                users = users.Where(u => u.Name.Contains(query.SearchTerm, StringComparison.OrdinalIgnoreCase) ||
-                                         u.Email.Contains(query.SearchTerm, StringComparison.OrdinalIgnoreCase));
+                var searchTermLower = query.SearchTerm.ToLower();
+                users = users.Where(u => u.Name.ToLower().Contains(searchTermLower) ||
+                                         u.Email.ToLower().Contains(searchTermLower));
             }
 
             if (query.IsBlockedFilter.HasValue)

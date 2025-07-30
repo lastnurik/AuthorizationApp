@@ -44,8 +44,8 @@ namespace AuthorizationApp.Infrastructure
             }
 
             var user = await this.context.Users.AsNoTracking()
-                .FirstOrDefaultAsync(u => u.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
-            return user;
+                .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
+            return user ?? null;
         }
 
         public async Task<IEnumerable<User>> GetAllAsync()

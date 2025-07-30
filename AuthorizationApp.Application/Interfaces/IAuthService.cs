@@ -1,4 +1,5 @@
-﻿using AuthorizationApp.Application.DTO;
+﻿using AuthorizationApp.Application.Commands;
+using AuthorizationApp.Application.DTO;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,8 +10,8 @@ namespace AuthorizationApp.Application.Interfaces
 {
     public interface IAuthService
     {
-        Task<UserDto?> RegisterAsync(UserRegistrationDto userRegistration);
+        Task<UserDto?> RegisterAsync(RegisterUserCommand userRegistration);
 
-        Task<UserLoginResponseDto?> LoginAsync(UserLoginDto userLogin);
+        Task<UserLoginResponseDto?> LoginAsync(LoginUserCommand userLogin);
     }
 }
