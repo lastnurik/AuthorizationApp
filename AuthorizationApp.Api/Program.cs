@@ -88,7 +88,8 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigin",
-        builder => builder.WithOrigins("http://localhost:3000")
+        builder => builder.WithOrigins("http://localhost:5173", 
+                        "https://authorization-app-backend-byfmc6dmgrgadmd0.polandcentral-01.azurewebsites.net/")
                           .AllowAnyHeader()
                           .AllowAnyMethod()
                           .AllowCredentials());
