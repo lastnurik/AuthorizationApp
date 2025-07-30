@@ -24,7 +24,7 @@ namespace AuthorizationApp.Domain.Entities
 
         public bool IsBlocked { get; private set; } = false;
 
-        public DateTime? LastLogin { get; private set; }
+        public DateTime? LastLogin { get; set; }
 
         public User(string name, string email, string passwordHash)
         {

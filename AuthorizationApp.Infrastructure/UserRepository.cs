@@ -70,6 +70,7 @@ namespace AuthorizationApp.Infrastructure
             existingUser.Name = user.Name;
             existingUser.Email = user.Email;
             existingUser.PasswordHash = user.PasswordHash;
+            existingUser.LastLogin = user.LastLogin;
 
             return await this.context.SaveChangesAsync() > 0;
         }
