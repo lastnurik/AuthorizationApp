@@ -1,7 +1,7 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy Node.js app to Azure Web App - authorization-app-frontend
+name: Deploy React Frontend to Azure Web App
 
 on:
   push:
@@ -9,66 +9,67 @@ on:
       - master # or 'main', adjust as per your default branch
     paths:
       - 'AuthorizationApp.ClientApp/authorization-app/**' # Trigger only on changes in frontend folder
-  workflow_dispatch:
+  workflow_dispatch: # Allows manual triggering of the workflow
 
 env:
-  FRONTEND_APP_PATH: 'AuthorizationApp.ClientApp/authorization-app' # Define the base path for the frontend project
-  NODE_VERSION: '22.x' # Ensure this matches your App Service Node runtime
+  AZURE_WEBAPP_NAME: authorization-app-frontend # Replace with your Azure Frontend App Service name
+  # Define the base path for the frontend project
+  FRONTEND_BASE_PATH: 'AuthorizationApp.ClientApp/authorization-app'
+  # Path to your built React app artifacts relative to the repo root
+  AZURE_WEBAPP_PACKAGE_PATH: 'AuthorizationApp.ClientApp/authorization-app/dist'
+  NODE_VERSION: '22.x' # Or '20.x' - ensure this matches your App Service Node runtime
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: windows-latest # Keeping windows-latest as per your current setup
-    permissions:
-      contents: read # This is required for actions/checkout
 
     steps:
-      - uses: actions/checkout@v4
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
-      - name: Set up Node.js version
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm' # Cache npm dependencies
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm' # Cache npm dependencies
+        cache-dependency-path: ${{ env.FRONTEND_BASE_PATH }}/package-lock.json # IMPORTANT: Specify lock file path for caching
 
-      - name: npm install, build, and test
-        run: |
-          npm install
-          npm run build --if-present
-          npm run test --if-present
-        working-directory: ${{ env.FRONTEND_APP_PATH }} # IMPORTANT: Run commands in the frontend project directory
+    - name: Install Dependencies
+      run: npm install
+      working-directory: ${{ env.FRONTEND_BASE_PATH }} # Explicitly set working directory
 
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
-        with:
-          name: node-app # Name of the artifact
-          path: ${{ env.FRONTEND_APP_PATH }}/dist # IMPORTANT: Upload only the 'dist' folder from the frontend project
+    - name: Build React App
+      run: npm run build
+      working-directory: ${{ env.FRONTEND_BASE_PATH }} # Explicitly set working directory
 
-  deploy:
+    - name: Upload artifact for deployment job
+      uses: actions/upload-artifact@v4
+      with:
+        name: react-app-build
+        path: ${{ env.FRONTEND_BASE_PATH }}/dist # Path to the built files relative to repo root
+
+  deploy-to-azure:
+    needs: build-and-deploy # This job depends on the build job
     runs-on: ubuntu-latest # Keeping ubuntu-latest for deployment
-    needs: build
-    permissions:
-      id-token: write # This is required for requesting the JWT
-      contents: read # This is required for actions/checkout
 
     steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: node-app # Name of the artifact to download
-          path: . # Download to the current directory (which will be the root for deployment)
+    - name: Download artifact from build job
+      uses: actions/download-artifact@v4
+      with:
+        name: react-app-build
+        path: . # Download to the current directory (which will be the root for deployment)
 
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_F6789CCBADD44F6DAF03E981F1148337 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_D088C1FE236242808FFE47E581753F27 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_AF8A40CA776A4434A244115EDA318447 }}
+    - name: 'Login to Azure'
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_F6789CCBADD44F6DAF03E981F1148337 }}
+        tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_D088C1FE236242808FFE47E581753F27 }}
+        subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_AF8A40CA776A4434A244115EDA318447 }}
 
-      - name: 'Deploy to Azure Web App'
-        uses: azure/webapps-deploy@v3
-        id: deploy-to-webapp
-        with:
-          app-name: 'authorization-app-frontend'
-          slot-name: 'Production'
-          package: . # Deploy the downloaded artifact (which is the 'dist' folder content)
-          clean: true
+    - name: 'Deploy to Azure Web App'
+      id: deploy-to-webapp
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        slot-name: 'Production' # Or 'staging' if you use deployment slots
+        package: . # Deploy the downloaded artifact (which is the 'dist' folder content)
