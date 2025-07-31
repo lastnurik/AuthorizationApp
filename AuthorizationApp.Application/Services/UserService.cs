@@ -57,7 +57,7 @@ namespace AuthorizationApp.Application.Services
 
         }
 
-        public async Task<IEnumerable<UserDto>> GetUsersAsync(GetUsersQuery query)
+        public async Task<PaginatedResult<UserDto>> GetUsersAsync(GetUsersQuery query)
         {
             var users = (await this.userRepository.GetAllAsync()).AsQueryable();
 
@@ -101,14 +101,22 @@ namespace AuthorizationApp.Application.Services
                .Skip((query.PageNumber - 1) * query.PageSize)
                .Take(query.PageSize);
 
-            return pagedUsers.Select(u => new UserDto
+            var paginatedResult = new PaginatedResult<UserDto>
             {
-                Id = u.Id,
-                Name = u.Name,
-                Email = u.Email,
-                IsBlocked = u.IsBlocked,
-                LastLogin = u.LastLogin,
-            }).ToList();
+                Items = pagedUsers.Select(u => new UserDto
+                {
+                    Id = u.Id,
+                    Name = u.Name,
+                    Email = u.Email,
+                    IsBlocked = u.IsBlocked,
+                    LastLogin = u.LastLogin
+                }).ToList(),
+                TotalCount = users.Count(),
+                PageNumber = query.PageNumber,
+                PageSize = query.PageSize
+            };
+
+            return paginatedResult;
         }
 
         public async Task UnblockUsersAsync(UnblockUsersCommand command)

@@ -16,7 +16,7 @@ namespace AuthorizationApp.Application.Interfaces
         /// </summary>
         /// <param name="query">The query object for filtering and pagination (if implemented).</param>
         /// <returns>A Task representing the asynchronous operation, returning an enumerable collection of UserDto.</returns>
-        Task<IEnumerable<UserDto>> GetUsersAsync(GetUsersQuery query);
+        Task<PaginatedResult<UserDto>> GetUsersAsync(GetUsersQuery query);
 
         Task<UserDto> GetUserByIdAsync(int userId);
 
