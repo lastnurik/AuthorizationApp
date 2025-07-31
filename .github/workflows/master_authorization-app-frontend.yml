@@ -6,14 +6,20 @@ name: Build and deploy Node.js app to Azure Web App - authorization-app-frontend
 on:
   push:
     branches:
-      - master
+      - master # or 'main', adjust as per your default branch
+    paths:
+      - 'AuthorizationApp.ClientApp/authorization-app/**' # Trigger only on changes in frontend folder
   workflow_dispatch:
+
+env:
+  FRONTEND_APP_PATH: 'AuthorizationApp.ClientApp/authorization-app' # Define the base path for the frontend project
+  NODE_VERSION: '22.x' # Ensure this matches your App Service Node runtime
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-latest # Keeping windows-latest as per your current setup
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read # This is required for actions/checkout
 
     steps:
       - uses: actions/checkout@v4
@@ -21,33 +27,36 @@ jobs:
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
-          node-version: '22.x'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm' # Cache npm dependencies
 
       - name: npm install, build, and test
         run: |
           npm install
           npm run build --if-present
           npm run test --if-present
-      
+        working-directory: ${{ env.FRONTEND_APP_PATH }} # IMPORTANT: Run commands in the frontend project directory
+
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
-          name: node-app
-          path: .
+          name: node-app # Name of the artifact
+          path: ${{ env.FRONTEND_APP_PATH }}/dist # IMPORTANT: Upload only the 'dist' folder from the frontend project
 
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # Keeping ubuntu-latest for deployment
     needs: build
     permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      id-token: write # This is required for requesting the JWT
+      contents: read # This is required for actions/checkout
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: node-app
-      
+          name: node-app # Name of the artifact to download
+          path: . # Download to the current directory (which will be the root for deployment)
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -61,5 +70,4 @@ jobs:
         with:
           app-name: 'authorization-app-frontend'
           slot-name: 'Production'
-          package: .
-          
+          package: . # Deploy the downloaded artifact (which is the 'dist' folder content)
