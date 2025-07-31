@@ -106,20 +106,6 @@ function ProfilePage() {
       return;
     }
 
-    if (newPassword !== confirmNewPassword) {
-      setPasswordMessage('New password and confirm password do not match.');
-      setPasswordMessageType('danger');
-      setPasswordLoading(false);
-      return;
-    }
-
-    if (newPassword.length < 6 || newPassword.length > 100) {
-      setPasswordMessage('New password must be between 6 and 100 characters.');
-      setPasswordMessageType('danger');
-      setPasswordLoading(false);
-      return;
-    }
-
     if (!user || !user.id) {
       setPasswordMessage('User ID not found. Cannot update password.');
       setPasswordMessageType('danger');

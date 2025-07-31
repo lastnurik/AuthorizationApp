@@ -4,7 +4,7 @@ import Message from '../components/Message';
 import { useNavigate } from 'react-router-dom';
 
 function MainPage() {
-  const { token, backendUrl, isLoggedIn, logout, user } = useAuth(); // Added 'user' to destructuring
+  const { token, backendUrl, isLoggedIn, logout, user } = useAuth();
   const navigate = useNavigate();
 
   const [users, setUsers] = useState([]);
@@ -25,6 +25,8 @@ function MainPage() {
   const [totalUsers, setTotalUsers] = useState(0);
 
   const fetchUsers = useCallback(async () => {
+    // This check ensures that if isLoggedIn becomes false (e.g., after logout from another component),
+    // this function immediately redirects without attempting a fetch.
     if (!isLoggedIn) {
       navigate('/login');
       return;
@@ -64,6 +66,7 @@ function MainPage() {
 
         if (data && Array.isArray(data.items) && typeof data.totalPages === 'number' && typeof data.totalCount === 'number') {
             // Filter out the current user from the list
+            // Ensure 'user' is available before filtering
             const filteredUsers = data.items.filter(u => user && u.id !== user.id);
             setUsers(filteredUsers);
             setTotalPages(data.totalPages);
@@ -78,6 +81,8 @@ function MainPage() {
             setTotalUsers(0);
         }
       } else if (response.status === 401) {
+        // If the API returns 401, it means the token is invalid/expired.
+        // Log out the user and redirect to login.
         logout();
         navigate('/login');
       } else {
@@ -90,16 +95,20 @@ function MainPage() {
     } finally {
       setLoading(false);
     }
-  }, [pageNumber, pageSize, sortBy, sortDescending, searchTerm, isBlockedFilter, isLoggedIn, token, backendUrl, navigate, logout, user]); // Added 'user' to dependencies
+  }, [pageNumber, pageSize, sortBy, sortDescending, searchTerm, isBlockedFilter, isLoggedIn, token, backendUrl, navigate, logout, user]);
 
   useEffect(() => {
     // This useEffect triggers the initial fetch when the component mounts
     // and re-fetches when pagination, sort, or filter parameters change.
-    // Ensure 'user' is available before fetching, as we filter based on it.
-    if (user) {
+    // It also ensures immediate redirection if isLoggedIn becomes false.
+    if (isLoggedIn) {
       fetchUsers();
+    } else {
+      // If not logged in (e.g., no token on initial load, or after logout),
+      // ensure immediate redirection to login.
+      navigate('/login');
     }
-  }, [fetchUsers, user]); // Added 'user' to dependencies
+  }, [fetchUsers, isLoggedIn, navigate]); // Depend on isLoggedIn and navigate
 
   // Effect to update "Last seen" relative time every minute
   useEffect(() => {

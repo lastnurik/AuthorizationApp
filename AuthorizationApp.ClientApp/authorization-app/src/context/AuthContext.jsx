@@ -6,7 +6,9 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [isLoggedIn, setIsLoggedIn] = useState(!!token);
-  const backendUrl = "https://authorization-app-backend-byfmc6dmgrgadmd0.polandcentral-01.azurewebsites.net";
+  const prodUrl = "https://authorization-app-backend-byfmc6dmgrgadmd0.polandcentral-01.azurewebsites.net";
+  const testUrl = "https://localhost:7133";
+  const backendUrl = prodUrl;
 
   useEffect(() => {
     setIsLoggedIn(!!token);
@@ -32,11 +34,11 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
       } else {
         console.error("Failed to fetch user details:", response.statusText);
-        logout();
+        logout(); // Log out if token is invalid or expired
       }
     } catch (error) {
       console.error("Error fetching user details:", error);
-      logout();
+      logout(); // Log out on network or other errors
     }
   };
 
@@ -55,7 +57,7 @@ export const AuthProvider = ({ children }) => {
       if (response.ok) {
         setToken(data.token);
         localStorage.setItem('token', data.token);
-        fetchUserDetails(data.token);
+        await fetchUserDetails(data.token); // Ensure user details are fetched immediately after login
         return { success: true, message: 'Login successful!' };
       } else {
         return { success: false, message: data.message || 'Login failed.' };
@@ -66,7 +68,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Modified register function to accept all fields
   const register = async (name, email, password, confirmPassword) => {
     try {
       const response = await fetch(`${backendUrl}/api/Auth/register`, {
@@ -74,7 +75,6 @@ export const AuthProvider = ({ children }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        // Sending all fields required by UserRegistrationDto
         body: JSON.stringify({ name, email, password, confirmPassword }),
       });
 
@@ -98,7 +98,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn, token, login, register, logout, backendUrl }}>
+    <AuthContext.Provider value={{ user, isLoggedIn, token, login, register, logout, backendUrl, fetchUserDetails }}>
       {children}
     </AuthContext.Provider>
   );
