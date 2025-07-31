@@ -1,0 +1,80 @@
+import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate, Link } from 'react-router-dom'; // <--- Link imported here
+import Message from '../components/Message';
+
+function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [message, setMessage] = useState(null);
+  const [messageType, setMessageType] = useState('');
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setMessage(null);
+    setMessageType('');
+
+    if (!email || !password) {
+      setMessage('Please enter both email and password.');
+      setMessageType('danger');
+      return;
+    }
+
+    const result = await login(email, password);
+    if (result.success) {
+      setMessage(result.message);
+      setMessageType('success');
+      setTimeout(() => {
+        navigate('/main');
+      }, 1500);
+    } else {
+      setMessage(result.message);
+      setMessageType('danger');
+    }
+  };
+
+  return (
+    <div className="row justify-content-center">
+      <div className="col-md-6 col-lg-4">
+        <div className="card p-4 shadow-sm">
+          <h2 className="mb-4 text-center">Login</h2>
+          <Message type={messageType} message={message} />
+          <form onSubmit={handleSubmit}>
+            <div className="mb-3">
+              <label htmlFor="emailInput" className="form-label">Email address</label>
+              <input
+                type="email"
+                className="form-control"
+                id="emailInput"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="mb-3">
+              <label htmlFor="passwordInput" className="form-label">Password</label>
+              <input
+                type="password"
+                className="form-control"
+                id="passwordInput"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="d-grid gap-2">
+              <button type="submit" className="btn btn-primary">Login</button>
+            </div>
+          </form>
+          <p className="mt-3 text-center">
+            Don't have an account? <Link to="/register">Register here</Link>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default LoginPage;

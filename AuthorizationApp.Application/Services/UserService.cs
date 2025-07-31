@@ -131,5 +131,34 @@ namespace AuthorizationApp.Application.Services
                 }
             }
         }
+
+        public async Task<UserDto?> UpdateUserAsync(UpdateUserCommand command)
+        {
+            var user = await this.userRepository.GetByIdAsync(command.Id);
+            if (user == null)
+            {
+                return null;
+            }
+
+            if (user.Email.ToLower() != command.Email.ToLower())
+            {
+                var existingUserWithNewEmail = await this.userRepository.GetByEmailAsync(command.Email);
+                if (existingUserWithNewEmail != null && existingUserWithNewEmail.Id != user.Id)
+                {
+                    return null;
+                }
+            }
+
+            await this.userRepository.UpdateAsync(command.Id, user);
+
+            return new UserDto
+            {
+                Id = user.Id,
+                Name = user.Name,
+                Email = user.Email,
+                IsBlocked = user.IsBlocked,
+                LastLogin = user.LastLogin,
+            };
+        }
     }
 }

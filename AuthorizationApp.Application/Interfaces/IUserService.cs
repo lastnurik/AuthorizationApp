@@ -40,5 +40,7 @@ namespace AuthorizationApp.Application.Interfaces
         /// <param name="command">The command containing the IDs of users to delete.</param>
         /// <returns>A Task representing the asynchronous operation.</returns>
         Task DeleteUsersAsync(DeleteUsersCommand command);
+
+        Task<UserDto?> UpdateUserAsync(UpdateUserCommand command);
     }
 }
