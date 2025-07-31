@@ -6,14 +6,20 @@ name: Build and deploy ASP.Net Core app to Azure Web App - authorization-app-bac
 on:
   push:
     branches:
-      - master
+      - master # or 'main', adjust as per your default branch
+    paths:
+      - 'AuthorizationApp.Api/**' # Trigger only on changes in backend folder
   workflow_dispatch:
+
+env:
+  BACKEND_APP_PATH: 'AuthorizationApp.Api' # Define the base path for the backend project
+  DOTNET_VERSION: '8.x' # Ensure this matches your App Service .NET runtime
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-latest # Keeping windows-latest as per your current setup
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read # This is required for actions/checkout
 
     steps:
       - uses: actions/checkout@v4
@@ -21,33 +27,40 @@ jobs:
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.x'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore
+        working-directory: ${{ env.BACKEND_APP_PATH }} # IMPORTANT: Run restore in the backend project directory
 
       - name: Build with dotnet
-        run: dotnet build --configuration Release
+        run: dotnet build --configuration Release --no-restore # --no-restore because we already restored
+        working-directory: ${{ env.BACKEND_APP_PATH }} # IMPORTANT: Run build in the backend project directory
 
       - name: dotnet publish
-        run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
+        run: dotnet publish -c Release -o "${{github.workspace}}/myapp" --no-build # --no-build because we already built
+        working-directory: ${{ env.BACKEND_APP_PATH }} # IMPORTANT: Run publish in the backend project directory
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
+          path: ${{github.workspace}}/myapp # Path to the published output
 
   deploy:
-    runs-on: windows-latest
+    runs-on: windows-latest # Keeping windows-latest for deployment
     needs: build
     permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      id-token: write # This is required for requesting the JWT
+      contents: read # This is required for actions/checkout
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: .net-app
-      
+          path: . # Download to the current directory (which will be the root for deployment)
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -55,11 +68,10 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_ED981307FF6940578971D47C057192D6 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_AC4A7975925641C89306FE803DED0395 }}
 
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
+      - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
+        id: deploy-to-webapp
         with:
           app-name: 'authorization-app-backend'
           slot-name: 'Production'
-          package: .
-          
+          package: . # Deploy the downloaded artifact
