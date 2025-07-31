@@ -98,9 +98,6 @@ function MainPage() {
   }, [pageNumber, pageSize, sortBy, sortDescending, searchTerm, isBlockedFilter, isLoggedIn, token, backendUrl, navigate, logout, user]);
 
   useEffect(() => {
-    // This useEffect triggers the initial fetch when the component mounts
-    // and re-fetches when pagination, sort, or filter parameters change.
-    // It also ensures immediate redirection if isLoggedIn becomes false.
     if (isLoggedIn) {
       fetchUsers();
     } else {
