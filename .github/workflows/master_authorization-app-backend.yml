@@ -8,7 +8,10 @@ on:
     branches:
       - master # or 'main', adjust as per your default branch
     paths:
-      - 'AuthorizationApp.Api/**' # Trigger only on changes in backend folder
+      - 'AuthorizationApp.Api/**'
+      - 'AuthorizationApp.Application/**'
+      - 'AuthorizationApp.Domain/**'
+      - 'AuthorizationApp.Infrastructure/**' # <--- Added these lines
   workflow_dispatch:
 
 env:
