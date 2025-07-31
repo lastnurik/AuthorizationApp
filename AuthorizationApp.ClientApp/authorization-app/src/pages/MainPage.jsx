@@ -79,8 +79,6 @@ function MainPage() {
             setTotalUsers(0);
         }
       } else if (response.status === 401) {
-        // If the API returns 401, it means the token is invalid/expired.
-        // Log out the user and redirect to login.
         logout();
         navigate('/login');
       } else {
@@ -96,23 +94,16 @@ function MainPage() {
   }, [pageNumber, pageSize, sortBy, sortDescending, searchTerm, isBlockedFilter, isLoggedIn, token, backendUrl, navigate, logout, user]);
 
   useEffect(() => {
-    // This useEffect is the primary guard for the MainPage.
-    // It will immediately redirect if isLoggedIn is false.
-    // If isLoggedIn is true, it will then proceed to fetch user data.
     if (!isLoggedIn) {
       navigate('/login');
-      return; // Stop execution of this effect
+      return;
     }
 
-    // Only fetch users if logged in and user object is available (for filtering)
-    // The user object might be null initially while AuthContext is fetching it.
-    // fetchUsers itself has a !isLoggedIn check.
     if (user) {
       fetchUsers();
     }
-  }, [isLoggedIn, navigate, fetchUsers, user]); // Added user to dependencies
+  }, [isLoggedIn, navigate, fetchUsers, user]);
 
-  // Effect to update "Last seen" relative time every minute
   useEffect(() => {
     const interval = setInterval(() => {
       setUsers(prevUsers => [...prevUsers]);
