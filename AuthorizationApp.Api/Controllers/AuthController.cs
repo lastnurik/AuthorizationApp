@@ -92,7 +92,6 @@ namespace AuthorizationApp.Api.Controllers
                 return BadRequest(ModelState);
             }
 
-            // Ensure the user is only updating their own profile
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int currentUserId) || currentUserId != command.Id)
             {
@@ -103,14 +102,12 @@ namespace AuthorizationApp.Api.Controllers
 
             if (!success)
             {
-                // This could be due to user not found, or email already exists
                 return Conflict(new { message = "Failed to update profile. Email might be taken or user not found." });
             }
 
             return Ok(new { message = "Profile updated successfully." });
         }
 
-        // NEW ENDPOINT: Update User Password
         [HttpPost("updatePassword")]
         [Authorize]
         public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordCommand command)
