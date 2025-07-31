@@ -82,5 +82,58 @@ namespace AuthorizationApp.Api.Controllers
 
             return Ok(userDto);
         }
+
+        [HttpPost("updateProfileInfo")]
+        [Authorize]
+        public async Task<IActionResult> UpdateProfileInfo([FromBody] UpdateUserCommand command)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // Ensure the user is only updating their own profile
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int currentUserId) || currentUserId != command.Id)
+            {
+                return Forbid();
+            }
+
+            var success = await this.authService.UpdateUserProfileAsync(command);
+
+            if (!success)
+            {
+                // This could be due to user not found, or email already exists
+                return Conflict(new { message = "Failed to update profile. Email might be taken or user not found." });
+            }
+
+            return Ok(new { message = "Profile updated successfully." });
+        }
+
+        // NEW ENDPOINT: Update User Password
+        [HttpPost("updatePassword")]
+        [Authorize]
+        public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordCommand command)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int currentUserId) || currentUserId != command.UserId)
+            {
+                return Forbid();
+            }
+
+            var result = await this.authService.UpdateUserPasswordAsync(command);
+
+            if (!result)
+            {
+                return BadRequest();
+            }
+
+            return Ok();
+        }
     }
 }

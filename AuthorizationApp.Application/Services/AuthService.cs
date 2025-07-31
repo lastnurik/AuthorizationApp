@@ -84,5 +84,55 @@ namespace AuthorizationApp.Application.Services
                 LastLogin = newUser.LastLogin,
             };
         }
+
+        public async Task<bool> UpdateUserProfileAsync(UpdateUserCommand command)
+        {
+            var user = await this.userRepository.GetByIdAsync(command.Id);
+            if (user == null)
+            {
+                return false;
+            }
+
+            var existingUserWithEmail = await this.userRepository.GetByEmailAsync(command.Email);
+            if (existingUserWithEmail != null && existingUserWithEmail.Id != user.Id)
+            {
+                return false;
+            }
+
+            user.Name = command.Name;
+            user.Email = command.Email;
+
+            return await this.userRepository.UpdateAsync(user.Id, user);
+        }
+
+        // NEW METHOD: Update User Password
+        public async Task<bool> UpdateUserPasswordAsync(UpdatePasswordCommand command)
+        {
+            var user = await this.userRepository.GetByIdAsync(command.UserId);
+            if (user == null)
+            {
+                return false;
+            }
+
+            var isCurrentPasswordValid = this.passwordHasher.VerifyHashedPassword(user.PasswordHash, command.CurrentPassword);
+            if (!isCurrentPasswordValid)
+            {
+                return false;
+            }
+
+            var newHashedPassword = this.passwordHasher.HashPassword(command.NewPassword);
+            user.UpdatePasswordHash(newHashedPassword);
+
+            var success = await this.userRepository.UpdateAsync(user.Id, user);
+
+            if (success)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
     }
 }
