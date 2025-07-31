@@ -257,9 +257,8 @@ function MainPage() {
     document.head.appendChild(link);
   }, []);
 
-  // Conditional rendering to prevent content flash before redirection
   if (!isLoggedIn) {
-    return null; // Don't render anything if not logged in, let the useEffect handle navigation
+    return null;
   }
 
   return (

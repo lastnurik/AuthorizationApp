@@ -8,7 +8,7 @@ function LoginPage() {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState(null);
   const [messageType, setMessageType] = useState('');
-  const [loading, setLoading] = useState(false); // New loading state
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -16,12 +16,12 @@ function LoginPage() {
     e.preventDefault();
     setMessage(null);
     setMessageType('');
-    setLoading(true); // Set loading to true on form submission
+    setLoading(true);
 
     if (!email || !password) {
       setMessage('Email and password are required.');
       setMessageType('danger');
-      setLoading(false); // Reset loading if validation fails
+      setLoading(false);
       return;
     }
 
@@ -36,7 +36,7 @@ function LoginPage() {
       setMessage(result.message);
       setMessageType('danger');
     }
-    setLoading(false); // Reset loading after API call completes
+    setLoading(false);
   };
 
   return (
@@ -55,7 +55,7 @@ function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                disabled={loading} // Disable input while loading
+                disabled={loading}
               />
             </div>
             <div className="mb-3">
@@ -67,11 +67,11 @@ function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                disabled={loading} // Disable input while loading
+                disabled={loading}
               />
             </div>
             <div className="d-grid gap-2">
-              <button type="submit" className="btn btn-primary" disabled={loading}> {/* Disable button while loading */}
+              <button type="submit" className="btn btn-primary" disabled={loading}> {}
                 {loading ? (
                   <>
                     <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>

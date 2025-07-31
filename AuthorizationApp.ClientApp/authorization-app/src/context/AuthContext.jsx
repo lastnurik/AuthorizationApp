@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }) => {
       if (response.ok) {
         setToken(data.token);
         localStorage.setItem('token', data.token);
-        await fetchUserDetails(data.token); // Ensure user details are fetched immediately after login
+        await fetchUserDetails(data.token);
         return { success: true, message: 'Login successful!' };
       } else {
         return { success: false, message: data.message || 'Login failed.' };

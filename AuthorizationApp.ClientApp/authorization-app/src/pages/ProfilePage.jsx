@@ -7,14 +7,12 @@ function ProfilePage() {
   const { user, isLoggedIn, logout, token, backendUrl, fetchUserDetails } = useAuth();
   const navigate = useNavigate();
 
-  // State for User Info Update Form
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [userInfoMessage, setUserInfoMessage] = useState(null);
   const [userInfoMessageType, setUserInfoMessageType] = useState('');
   const [userInfoLoading, setUserInfoLoading] = useState(false);
 
-  // State for Password Update Form
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -24,16 +22,15 @@ function ProfilePage() {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate('/login'); // Redirect to login if not authenticated
+      navigate('/login');
     }
-    // Initialize form fields with current user data when user object is available
+
     if (user) {
       setName(user.name || '');
       setEmail(user.email || '');
     }
   }, [isLoggedIn, navigate, user]);
 
-  // Handle User Info Update
   const handleUpdateUserInfo = async (e) => {
     e.preventDefault();
     setUserInfoMessage(null);
@@ -55,15 +52,14 @@ function ProfilePage() {
     }
 
     try {
-      // Corrected endpoint and method for updating user info
       const response = await fetch(`${backendUrl}/api/Auth/updateProfileInfo`, {
-        method: 'POST', // Changed to POST
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          id: user.id, // User ID from context
+          id: user.id,
           name: name,
           email: email,
         }),
@@ -72,7 +68,7 @@ function ProfilePage() {
       if (response.ok) {
         setUserInfoMessage('Profile updated successfully!');
         setUserInfoMessageType('success');
-        await fetchUserDetails(token); // Refresh user data in AuthContext
+        await fetchUserDetails(token);
       } else if (response.status === 401) {
         setUserInfoMessage('Unauthorized. Please login again.');
         setUserInfoMessageType('danger');
@@ -114,15 +110,14 @@ function ProfilePage() {
     }
 
     try {
-      // Corrected endpoint and method for updating password
       const response = await fetch(`${backendUrl}/api/Auth/updatePassword`, {
-        method: 'POST', // Changed to POST
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          userId: user.id, // User ID from context
+          userId: user.id,
           currentPassword: currentPassword,
           newPassword: newPassword,
           confirmNewPassword: confirmNewPassword,
@@ -132,7 +127,6 @@ function ProfilePage() {
       if (response.ok) {
         setPasswordMessage('Password updated successfully!');
         setPasswordMessageType('success');
-        // Clear password fields on success
         setCurrentPassword('');
         setNewPassword('');
         setConfirmNewPassword('');
