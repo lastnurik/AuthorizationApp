@@ -10,34 +10,34 @@ function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState(null);
   const [messageType, setMessageType] = useState('');
-  const { register } = useAuth(); // Get the register function from AuthContext
+  const [loading, setLoading] = useState(false); // New loading state
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage(null);
     setMessageType('');
+    setLoading(true); // Set loading to true on form submission
 
-    // Client-side validation
     if (!name || !email || !password || !confirmPassword) {
       setMessage('All fields are required.');
       setMessageType('danger');
+      setLoading(false); // Reset loading if validation fails
       return;
     }
 
     if (password !== confirmPassword) {
       setMessage('Passwords do not match.');
       setMessageType('danger');
+      setLoading(false); // Reset loading if validation fails
       return;
     }
 
-    // IMPORTANT: Ensure all four parameters are passed to the register function
     const result = await register(name, email, password, confirmPassword);
-
     if (result.success) {
       setMessage(result.message);
       setMessageType('success');
-      // Redirect to login page after a short delay to show success message
       setTimeout(() => {
         navigate('/login');
       }, 1500);
@@ -45,6 +45,7 @@ function RegisterPage() {
       setMessage(result.message);
       setMessageType('danger');
     }
+    setLoading(false); // Reset loading after API call completes
   };
 
   return (
@@ -63,6 +64,7 @@ function RegisterPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                disabled={loading} // Disable input while loading
               />
             </div>
             <div className="mb-3">
@@ -74,6 +76,7 @@ function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={loading} // Disable input while loading
               />
             </div>
             <div className="mb-3">
@@ -85,6 +88,7 @@ function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={loading} // Disable input while loading
               />
             </div>
             <div className="mb-3">
@@ -96,10 +100,20 @@ function RegisterPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
+                disabled={loading} // Disable input while loading
               />
             </div>
             <div className="d-grid gap-2">
-              <button type="submit" className="btn btn-success">Register</button>
+              <button type="submit" className="btn btn-success" disabled={loading}> {/* Disable button while loading */}
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Registering...
+                  </>
+                ) : (
+                  'Register'
+                )}
+              </button>
             </div>
           </form>
           <p className="mt-3 text-center">

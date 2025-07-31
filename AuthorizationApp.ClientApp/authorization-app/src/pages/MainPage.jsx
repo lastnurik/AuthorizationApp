@@ -25,8 +25,9 @@ function MainPage() {
   const [totalUsers, setTotalUsers] = useState(0);
 
   const fetchUsers = useCallback(async () => {
-    // This check ensures that if isLoggedIn becomes false (e.g., after logout from another component),
-    // this function immediately redirects without attempting a fetch.
+    // This check is the first line of defense within the fetch logic.
+    // If isLoggedIn is false, it means the AuthContext has already determined
+    // the user is not authenticated, so we redirect immediately.
     if (!isLoggedIn) {
       navigate('/login');
       return;
@@ -65,14 +66,11 @@ function MainPage() {
         console.log("Fetched paginated user data:", data);
 
         if (data && Array.isArray(data.items) && typeof data.totalPages === 'number' && typeof data.totalCount === 'number') {
-            // Filter out the current user from the list
-            // Ensure 'user' is available before filtering
             const filteredUsers = data.items.filter(u => user && u.id !== user.id);
             setUsers(filteredUsers);
             setTotalPages(data.totalPages);
-            // Adjust totalCount for display if filtering on frontend
             setTotalUsers(user ? data.totalCount - 1 : data.totalCount);
-            setSelectedUserIds(new Set()); // Clear selection on new data fetch
+            setSelectedUserIds(new Set());
         } else {
             setError('Received unexpected data structure from backend. Expected PaginatedResult.');
             console.error("Unexpected backend data structure:", data);
@@ -98,24 +96,30 @@ function MainPage() {
   }, [pageNumber, pageSize, sortBy, sortDescending, searchTerm, isBlockedFilter, isLoggedIn, token, backendUrl, navigate, logout, user]);
 
   useEffect(() => {
-    if (isLoggedIn) {
-      fetchUsers();
-    } else {
-      // If not logged in (e.g., no token on initial load, or after logout),
-      // ensure immediate redirection to login.
+    // This useEffect is the primary guard for the MainPage.
+    // It will immediately redirect if isLoggedIn is false.
+    // If isLoggedIn is true, it will then proceed to fetch user data.
+    if (!isLoggedIn) {
       navigate('/login');
+      return; // Stop execution of this effect
     }
-  }, [fetchUsers, isLoggedIn, navigate]); // Depend on isLoggedIn and navigate
+
+    // Only fetch users if logged in and user object is available (for filtering)
+    // The user object might be null initially while AuthContext is fetching it.
+    // fetchUsers itself has a !isLoggedIn check.
+    if (user) {
+      fetchUsers();
+    }
+  }, [isLoggedIn, navigate, fetchUsers, user]); // Added user to dependencies
 
   // Effect to update "Last seen" relative time every minute
   useEffect(() => {
     const interval = setInterval(() => {
-      // Trigger a re-render to update the relative time without refetching all data
       setUsers(prevUsers => [...prevUsers]);
-    }, 60 * 1000); // Update every minute
+    }, 60 * 1000);
 
-    return () => clearInterval(interval); // Clean up interval on component unmount
-  }, []); // Run once on mount
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSelectAll = (e) => {
     if (e.target.checked && Array.isArray(users)) {
@@ -188,7 +192,7 @@ function MainPage() {
       if (response.ok) {
         setMessage(successMessage);
         setMessageType('success');
-        fetchUsers(); // Refresh the user list
+        fetchUsers();
       } else if (response.status === 401) {
         logout();
         navigate('/login');
@@ -213,17 +217,16 @@ function MainPage() {
       setSortBy(column);
       setSortDescending(false);
     }
-    setPageNumber(1); // Reset to first page on sort change
+    setPageNumber(1);
   };
 
   const getSortIcon = (column) => {
     if (sortBy === column) {
       return sortDescending ? 'fas fa-sort-down' : 'fas fa-sort-up';
     }
-    return 'fas fa-sort'; // Default sort icon
+    return 'fas fa-sort';
   };
 
-  // Helper function to format time elapsed
   const formatTimeElapsed = (timestamp) => {
     if (!timestamp) return 'Never';
     const lastLoginDate = new Date(timestamp);
@@ -247,13 +250,17 @@ function MainPage() {
     }
   };
 
-  // Ensure Font Awesome is loaded for icons
   useEffect(() => {
     const link = document.createElement('link');
     link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css';
     link.rel = 'stylesheet';
     document.head.appendChild(link);
   }, []);
+
+  // Conditional rendering to prevent content flash before redirection
+  if (!isLoggedIn) {
+    return null; // Don't render anything if not logged in, let the useEffect handle navigation
+  }
 
   return (
     <div className="card p-4 shadow-sm">
@@ -270,8 +277,8 @@ function MainPage() {
       )}
 
       {/* Toolbar */}
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <div className="btn-group" role="group">
+      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">
+        <div className="btn-group mb-2 mb-md-0" role="group">
           <button
             className="btn btn-primary d-flex align-items-center"
             onClick={() => performAction('block')}
@@ -304,8 +311,8 @@ function MainPage() {
           </button>
         </div>
 
-        <div className="d-flex">
-          <div className="input-group me-2">
+        <div className="d-flex flex-column flex-sm-row w-100 w-md-auto">
+          <div className="input-group me-sm-2 mb-2 mb-sm-0">
             <input
               type="text"
               className="form-control"
@@ -314,7 +321,7 @@ function MainPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyPress={(e) => {
                 if (e.key === 'Enter') {
-                  setPageNumber(1); // Reset to first page on search
+                  setPageNumber(1);
                   fetchUsers();
                 }
               }}

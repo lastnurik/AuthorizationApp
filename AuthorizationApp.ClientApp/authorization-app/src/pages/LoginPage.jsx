@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom'; // <--- Link imported here
+import { useNavigate, Link } from 'react-router-dom';
 import Message from '../components/Message';
 
 function LoginPage() {
@@ -8,6 +8,7 @@ function LoginPage() {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState(null);
   const [messageType, setMessageType] = useState('');
+  const [loading, setLoading] = useState(false); // New loading state
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -15,10 +16,12 @@ function LoginPage() {
     e.preventDefault();
     setMessage(null);
     setMessageType('');
+    setLoading(true); // Set loading to true on form submission
 
     if (!email || !password) {
-      setMessage('Please enter both email and password.');
+      setMessage('Email and password are required.');
       setMessageType('danger');
+      setLoading(false); // Reset loading if validation fails
       return;
     }
 
@@ -33,6 +36,7 @@ function LoginPage() {
       setMessage(result.message);
       setMessageType('danger');
     }
+    setLoading(false); // Reset loading after API call completes
   };
 
   return (
@@ -51,6 +55,7 @@ function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={loading} // Disable input while loading
               />
             </div>
             <div className="mb-3">
@@ -62,10 +67,20 @@ function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={loading} // Disable input while loading
               />
             </div>
             <div className="d-grid gap-2">
-              <button type="submit" className="btn btn-primary">Login</button>
+              <button type="submit" className="btn btn-primary" disabled={loading}> {/* Disable button while loading */}
+                {loading ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Logging in...
+                  </>
+                ) : (
+                  'Login'
+                )}
+              </button>
             </div>
           </form>
           <p className="mt-3 text-center">
