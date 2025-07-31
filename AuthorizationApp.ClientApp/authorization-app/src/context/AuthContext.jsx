@@ -34,11 +34,11 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
       } else {
         console.error("Failed to fetch user details:", response.statusText);
-        logout(); // Log out if token is invalid or expired
+        logout();
       }
     } catch (error) {
       console.error("Error fetching user details:", error);
-      logout(); // Log out on network or other errors
+      logout();
     }
   };
 
