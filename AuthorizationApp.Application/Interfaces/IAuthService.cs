@@ -15,6 +15,7 @@ namespace AuthorizationApp.Application.Interfaces
         Task<UserLoginResponseDto?> LoginAsync(LoginUserCommand userLogin);
 
         Task<bool> UpdateUserProfileAsync(UpdateUserCommand command);
+
         Task<bool> UpdateUserPasswordAsync(UpdatePasswordCommand command);
     }
 }

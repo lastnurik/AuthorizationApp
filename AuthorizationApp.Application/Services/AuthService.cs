@@ -105,7 +105,6 @@ namespace AuthorizationApp.Application.Services
             return await this.userRepository.UpdateAsync(user.Id, user);
         }
 
-        // NEW METHOD: Update User Password
         public async Task<bool> UpdateUserPasswordAsync(UpdatePasswordCommand command)
         {
             var user = await this.userRepository.GetByIdAsync(command.UserId);
