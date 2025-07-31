@@ -22,6 +22,9 @@ env:
 jobs:
   build-and-deploy:
     runs-on: windows-latest # Keeping windows-latest as per your current setup
+    permissions:
+      contents: read # This is required for actions/checkout
+      id-token: write # IMPORTANT: Add this permission for OIDC login
 
     steps:
     - name: Checkout Repository
@@ -51,6 +54,9 @@ jobs:
   deploy-to-azure:
     needs: build-and-deploy # This job depends on the build job
     runs-on: ubuntu-latest # Keeping ubuntu-latest for deployment
+    permissions:
+      id-token: write # IMPORTANT: This permission is also needed here for the login step
+      contents: read # This is required for actions/checkout
 
     steps:
     - name: Download artifact from build job
