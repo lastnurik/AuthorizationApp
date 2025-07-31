@@ -71,3 +71,4 @@ jobs:
           app-name: 'authorization-app-frontend'
           slot-name: 'Production'
           package: . # Deploy the downloaded artifact (which is the 'dist' folder content)
+          clean: true

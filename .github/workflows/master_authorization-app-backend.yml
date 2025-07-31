@@ -75,3 +75,4 @@ jobs:
           app-name: 'authorization-app-backend'
           slot-name: 'Production'
           package: . # Deploy the downloaded artifact
+          clean: true
