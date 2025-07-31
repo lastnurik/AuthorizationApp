@@ -16,7 +16,7 @@ namespace AuthorizationApp.Application.Commands
         public string CurrentPassword { get; }
 
         [Required(ErrorMessage = "New password is required.")]
-        [StringLength(100, MinimumLength = 6, ErrorMessage = "New password must be between 6 and 100 characters.")]
+        [StringLength(100)]
         [DataType(DataType.Password)]
         public string NewPassword { get; }
 
