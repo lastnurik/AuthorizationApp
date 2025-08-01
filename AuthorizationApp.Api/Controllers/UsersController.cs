@@ -21,12 +21,6 @@ namespace AuthorizationApp.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetUsers([FromQuery] GetUsersQuery query)
         {
-            var isBlockedClaim = HttpContext.User.FindFirst("IsBlocked")?.Value;
-            if (bool.TryParse(isBlockedClaim, out var isBlocked) && isBlocked)
-            {
-                return Forbid("Access denied for blocked users.");
-            }
-
             var users = await this.userService.GetUsersAsync(query);
             return Ok(users);
         }
