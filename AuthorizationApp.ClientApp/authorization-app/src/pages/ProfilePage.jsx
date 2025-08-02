@@ -4,8 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Message from '../components/Message';
 
 function ProfilePage() {
-  // Destructure `apiClient` and `fetchUserDetails` from the AuthContext.
-  const { user, isLoggedIn, logout, backendUrl, fetchUserDetails, apiClient } = useAuth();
+  const { user, isLoggedIn, logout, token, backendUrl, fetchUserDetails } = useAuth();
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
@@ -53,8 +52,12 @@ function ProfilePage() {
     }
 
     try {
-      await apiClient(`${backendUrl}/api/Auth/updateProfileInfo`, {
+      const response = await fetch(`${backendUrl}/api/Auth/updateProfileInfo`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           id: user.id,
           name: name,
@@ -62,12 +65,21 @@ function ProfilePage() {
         }),
       });
 
-      setUserInfoMessage('Profile updated successfully!');
-      setUserInfoMessageType('success');
-      // Re-fetch user details to get the latest info
-      fetchUserDetails();
+      if (response.ok) {
+        setUserInfoMessage('Profile updated successfully!');
+        setUserInfoMessageType('success');
+        await fetchUserDetails(token);
+      } else if (response.status === 401) {
+        setUserInfoMessage('Unauthorized. Please login again.');
+        setUserInfoMessageType('danger');
+        logout();
+        navigate('/login');
+      } else {
+        const errorData = await response.json();
+        setUserInfoMessage(errorData.message || 'Failed to update profile.');
+        setUserInfoMessageType('danger');
+      }
     } catch (error) {
-      // apiClient handles unauthorized/forbidden errors. We only catch generic network errors here.
       console.error('Error updating user info:', error);
       setUserInfoMessage('An error occurred while updating profile.');
       setUserInfoMessageType('danger');
@@ -98,9 +110,12 @@ function ProfilePage() {
     }
 
     try {
-      // --- CRITICAL CHANGE: Use apiClient for this protected call ---
-      await apiClient(`${backendUrl}/api/Auth/updatePassword`, {
+      const response = await fetch(`${backendUrl}/api/Auth/updatePassword`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({
           userId: user.id,
           currentPassword: currentPassword,
@@ -109,13 +124,23 @@ function ProfilePage() {
         }),
       });
 
-      setPasswordMessage('Password updated successfully!');
-      setPasswordMessageType('success');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmNewPassword('');
+      if (response.ok) {
+        setPasswordMessage('Password updated successfully!');
+        setPasswordMessageType('success');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmNewPassword('');
+      } else if (response.status === 401) {
+        setPasswordMessage('Unauthorized. Please login again.');
+        setPasswordMessageType('danger');
+        logout();
+        navigate('/login');
+      } else {
+        const errorData = await response.json();
+        setPasswordMessage(errorData.message || 'Failed to update password.');
+        setPasswordMessageType('danger');
+      }
     } catch (error) {
-      // apiClient handles unauthorized/forbidden errors. We only catch generic network errors here.
       console.error('Error updating password:', error);
       setPasswordMessage('An error occurred while updating password.');
       setPasswordMessageType('danger');

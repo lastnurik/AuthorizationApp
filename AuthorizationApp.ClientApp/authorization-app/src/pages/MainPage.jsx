@@ -4,8 +4,7 @@ import Message from '../components/Message';
 import { useNavigate } from 'react-router-dom';
 
 function MainPage() {
-  // Destructure `apiClient` from the AuthContext. We no longer need the token here.
-  const { backendUrl, isLoggedIn, logout, user, apiClient } = useAuth();
+  const { token, backendUrl, isLoggedIn, logout, user } = useAuth();
   const navigate = useNavigate();
 
   const [users, setUsers] = useState([]);
@@ -18,15 +17,17 @@ function MainPage() {
   // Pagination and Sorting States
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [sortBy, setSortBy] = useState('name');
+  const [sortBy, setSortBy] = useState('name'); // Default sort by name
   const [sortDescending, setSortDescending] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isBlockedFilter, setIsBlockedFilter] = useState(null);
+  const [isBlockedFilter, setIsBlockedFilter] = useState(null); // null: all, true: blocked, false: unblocked
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
 
   const fetchUsers = useCallback(async () => {
-    // The `isLoggedIn` check here is a good early-exit guard.
+    // This check is the first line of defense within the fetch logic.
+    // If isLoggedIn is false, it means the AuthContext has already determined
+    // the user is not authenticated, so we redirect immediately.
     if (!isLoggedIn) {
       navigate('/login');
       return;
@@ -52,33 +53,45 @@ function MainPage() {
         queryParams.append('isBlockedFilter', isBlockedFilter);
       }
 
-      const data = await apiClient(`${backendUrl}/api/Users?${queryParams.toString()}`, {
+      const response = await fetch(`${backendUrl}/api/Users?${queryParams.toString()}`, {
         method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
       });
 
-      console.log("Fetched paginated user data:", data);
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Fetched paginated user data:", data);
 
-      if (data && Array.isArray(data.items) && typeof data.totalPages === 'number' && typeof data.totalCount === 'number') {
-        const filteredUsers = data.items.filter(u => user && u.id !== user.id);
-        setUsers(filteredUsers);
-        setTotalPages(data.totalPages);
-        setTotalUsers(user ? data.totalCount - 1 : data.totalCount);
-        setSelectedUserIds(new Set());
+        if (data && Array.isArray(data.items) && typeof data.totalPages === 'number' && typeof data.totalCount === 'number') {
+            const filteredUsers = data.items.filter(u => user && u.id !== user.id);
+            setUsers(filteredUsers);
+            setTotalPages(data.totalPages);
+            setTotalUsers(user ? data.totalCount - 1 : data.totalCount);
+            setSelectedUserIds(new Set());
+        } else {
+            setError('Received unexpected data structure from backend. Expected PaginatedResult.');
+            console.error("Unexpected backend data structure:", data);
+            setUsers([]);
+            setTotalPages(1);
+            setTotalUsers(0);
+        }
+      } else if (response.status === 401) {
+        logout();
+        navigate('/login');
       } else {
-        setError('Received unexpected data structure from backend. Expected PaginatedResult.');
-        console.error("Unexpected backend data structure:", data);
-        setUsers([]);
-        setTotalPages(1);
-        setTotalUsers(0);
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to fetch users.');
       }
     } catch (err) {
       console.error('Error fetching users:', err);
-      // The apiClient handles unauthorized/forbidden errors. We only catch generic network errors here.
       setError('An error occurred while fetching users. Please check your browser console for more details.');
     } finally {
       setLoading(false);
     }
-  }, [pageNumber, pageSize, sortBy, sortDescending, searchTerm, isBlockedFilter, isLoggedIn, backendUrl, navigate, user, apiClient]);
+  }, [pageNumber, pageSize, sortBy, sortDescending, searchTerm, isBlockedFilter, isLoggedIn, token, backendUrl, navigate, logout, user]);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -158,17 +171,28 @@ function MainPage() {
     }
 
     try {
-      // --- CRITICAL CHANGE: Use apiClient for all actions ---
-      await apiClient(endpoint, {
+      const response = await fetch(endpoint, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
         body: JSON.stringify({ userIds: userIdsArray }),
       });
 
-      setMessage(successMessage);
-      setMessageType('success');
-      fetchUsers();
+      if (response.ok) {
+        setMessage(successMessage);
+        setMessageType('success');
+        fetchUsers();
+      } else if (response.status === 401) {
+        logout();
+        navigate('/login');
+      } else {
+        const errorData = await response.json();
+        setMessage(errorData.message || errorMessage);
+        setMessageType('danger');
+      }
     } catch (err) {
-      // The apiClient handles unauthorized/forbidden errors. We only catch generic network errors here.
       console.error(`Error during ${actionType} action:`, err);
       setMessage(`An error occurred during the ${actionType} operation.`);
       setMessageType('danger');
