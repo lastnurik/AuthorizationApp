@@ -10,15 +10,15 @@ function App() {
   return (
     <Router>
       <Navbar />
-      <div className="container mt-4">
+      <main className="container py-4">
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/main" element={<MainPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/" element={<MainPage />} /> {/* Default route */}
+          <Route path="/" element={<MainPage />} />
         </Routes>
-      </div>
+      </main>
     </Router>
   );
 }

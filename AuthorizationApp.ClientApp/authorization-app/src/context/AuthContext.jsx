@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 
 const AuthContext = createContext(null);
 
@@ -6,49 +6,63 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [isLoggedIn, setIsLoggedIn] = useState(!!token);
-  const prodUrl = "https://authorization-app-backend-byfmc6dmgrgadmd0.polandcentral-01.azurewebsites.net";
-  const testUrl = "https://localhost:7133";
-  const backendUrl = prodUrl;
+  
+  const backendUrl = "https://authorization-app-backend-byfmc6dmgrgadmd0.polandcentral-01.azurewebsites.net";
 
-  useEffect(() => {
-    setIsLoggedIn(!!token);
+  const authFetch = useCallback(async (url, options = {}) => {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+    
     if (token) {
-      fetchUserDetails(token);
-    } else {
-      setUser(null);
+      headers.Authorization = `Bearer ${token}`;
     }
+
+    const response = await fetch(`${backendUrl}${url}`, {
+      ...options,
+      headers
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      logout();
+      return response;
+    }
+
+    return response;
   }, [token]);
 
-  const fetchUserDetails = async (authToken) => {
+  const fetchUserDetails = useCallback(async () => {
+    if (!token) return;
+    
     try {
-      const response = await fetch(`${backendUrl}/api/Auth/me`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
-        },
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-      } else {
-        console.error("Failed to fetch user details:", response.statusText);
-        logout();
+      const response = await authFetch('/api/Auth/me');
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch user details");
       }
+
+      const userData = await response.json();
+      setUser(userData);
     } catch (error) {
       console.error("Error fetching user details:", error);
       logout();
     }
-  };
+  }, [authFetch, token]);
+
+  useEffect(() => {
+    setIsLoggedIn(!!token);
+    if (token) {
+      fetchUserDetails();
+    } else {
+      setUser(null);
+    }
+  }, [token, fetchUserDetails]);
 
   const login = async (email, password) => {
     try {
-      const response = await fetch(`${backendUrl}/api/Auth/login`, {
+      const response = await authFetch('/api/Auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ email, password }),
       });
 
@@ -57,11 +71,9 @@ export const AuthProvider = ({ children }) => {
       if (response.ok) {
         setToken(data.token);
         localStorage.setItem('token', data.token);
-        await fetchUserDetails(data.token);
         return { success: true, message: 'Login successful!' };
-      } else {
-        return { success: false, message: data.message || 'Login failed.' };
       }
+      return { success: false, message: data.message || 'Login failed.' };
     } catch (error) {
       console.error('Login error:', error);
       return { success: false, message: 'An error occurred during login.' };
@@ -70,11 +82,8 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (name, email, password, confirmPassword) => {
     try {
-      const response = await fetch(`${backendUrl}/api/Auth/register`, {
+      const response = await authFetch('/api/Auth/register', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ name, email, password, confirmPassword }),
       });
 
@@ -82,9 +91,8 @@ export const AuthProvider = ({ children }) => {
 
       if (response.ok) {
         return { success: true, message: 'Registration successful! Please login.' };
-      } else {
-        return { success: false, message: data.message || 'Registration failed.' };
       }
+      return { success: false, message: data.message || 'Registration failed.' };
     } catch (error) {
       console.error('Register error:', error);
       return { success: false, message: 'An error occurred during registration.' };
@@ -98,12 +106,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn, token, login, register, logout, backendUrl, fetchUserDetails }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isLoggedIn, 
+      token, 
+      login, 
+      register, 
+      logout, 
+      authFetch 
+    }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export const useAuth = () => useContext(AuthContext);
