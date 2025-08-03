@@ -111,6 +111,7 @@ namespace AuthorizationApp.Application.Services
                     IsBlocked = u.IsBlocked,
                     LastLogin = u.LastLogin
                 }).ToList(),
+                TotalPages = (int)Math.Ceiling((double)users.Count() / query.PageSize),
                 TotalCount = users.Count(),
                 PageNumber = query.PageNumber,
                 PageSize = query.PageSize
