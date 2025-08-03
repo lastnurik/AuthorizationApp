@@ -72,7 +72,6 @@ function MainPage() {
       const data = await response.json();
       
       // Filter out current user from the response
-      const filteredUsers = data.items.filter(u => u.id !== user?.id);
       
       setUsers(filteredUsers);
       setTotalPages(data.totalPages);
