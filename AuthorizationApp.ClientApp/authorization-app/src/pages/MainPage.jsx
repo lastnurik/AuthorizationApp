@@ -122,7 +122,6 @@ function MainPage() {
       
       // Filter out current user and extract IDs
       const allUserIds = data.items
-        .filter(u => u.id !== user?.id)
         .map(user => user.id);
       
       return new Set(allUserIds);
@@ -135,9 +134,13 @@ function MainPage() {
   }, [authFetch, isLoggedIn, user]);
 
   const handleSelectAll = useCallback(async () => {
+    if (selectedUserIds.size === totalUsers && totalUsers > 0) {
+    setSelectedUserIds(new Set());
+    return;
+  }
     const allIds = await fetchAllUserIds();
     setSelectedUserIds(allIds);
-  }, [fetchAllUserIds]);
+  }, [fetchAllUserIds, selectedUserIds.size, totalUsers]);
 
   const handleSelectUser = (userId) => {
     setSelectedUserIds(prev => {
