@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Message from '../components/Message';
@@ -13,16 +13,35 @@ function MainPage() {
   const [messageType, setMessageType] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [fetchingAllIds, setFetchingAllIds] = useState(false);
 
   // Pagination and Sorting
   const [pageNumber, setPageNumber] = useState(1);
-  const [pageSize] = useState(10); // Fixed page size based on backend expectations
+  const [pageSize] = useState(10);
   const [sortBy, setSortBy] = useState('name');
   const [sortDescending, setSortDescending] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isBlockedFilter, setIsBlockedFilter] = useState(null);
   const [totalPages, setTotalPages] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
+
+  // Store filter parameters to avoid stale closures
+  const filterParamsRef = useRef({
+    sortBy,
+    sortDescending,
+    searchTerm,
+    isBlockedFilter
+  });
+
+  // Update ref when params change
+  useEffect(() => {
+    filterParamsRef.current = {
+      sortBy,
+      sortDescending,
+      searchTerm,
+      isBlockedFilter
+    };
+  }, [sortBy, sortDescending, searchTerm, isBlockedFilter]);
 
   const fetchUsers = useCallback(async () => {
     if (!isLoggedIn) {
@@ -51,12 +70,16 @@ function MainPage() {
       }
 
       const data = await response.json();
+      
+      // Filter out current user from the response
       const filteredUsers = data.items.filter(u => u.id !== user?.id);
       
       setUsers(filteredUsers);
       setTotalPages(data.totalPages);
-      setTotalUsers(user ? data.totalCount - 1 : data.totalCount);
-      setSelectedUserIds(new Set());
+      
+      // Calculate total users excluding current user
+      const totalExcludingCurrent = user ? data.totalCount - 1 : data.totalCount;
+      setTotalUsers(totalExcludingCurrent);
     } catch (err) {
       setError(err.message || 'An error occurred while fetching users');
       console.error('Error fetching users:', err);
@@ -76,22 +99,59 @@ function MainPage() {
     navigate
   ]);
 
-  useEffect(() => {
-    if (!isLoggedIn) {
-      navigate('/login');
-      return;
-    }
-    fetchUsers();
-  }, [isLoggedIn, navigate, fetchUsers]);
+  // Fetch all user IDs for the current filter
+  const fetchAllUserIds = useCallback(async () => {
+    if (!isLoggedIn) return new Set();
+    
+    setFetchingAllIds(true);
+    
+    try {
+      const { sortBy, sortDescending, searchTerm, isBlockedFilter } = filterParamsRef.current;
+      
+      const params = new URLSearchParams({
+        pageNumber: 1,
+        pageSize: 1000, // Fetch all users in one request (adjust as needed)
+        sortBy,
+        sortDescending,
+        ...(searchTerm && { searchTerm }),
+        ...(isBlockedFilter !== null && { isBlockedFilter })
+      });
 
-  const handleSelectAll = (e) => {
-    setSelectedUserIds(e.target.checked ? new Set(users.map(u => u.id)) : new Set());
-  };
+      const response = await authFetch(`/api/Users?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch user IDs');
+      }
+
+      const data = await response.json();
+      
+      // Filter out current user and extract IDs
+      const allUserIds = data.items
+        .filter(u => u.id !== user?.id)
+        .map(user => user.id);
+      
+      return new Set(allUserIds);
+    } catch (err) {
+      console.error('Error fetching all user IDs:', err);
+      return new Set();
+    } finally {
+      setFetchingAllIds(false);
+    }
+  }, [authFetch, isLoggedIn, user]);
+
+  const handleSelectAll = useCallback(async () => {
+    const allIds = await fetchAllUserIds();
+    setSelectedUserIds(allIds);
+  }, [fetchAllUserIds]);
 
   const handleSelectUser = (userId) => {
     setSelectedUserIds(prev => {
       const newSet = new Set(prev);
-      newSet.has(userId) ? newSet.delete(userId) : newSet.add(userId);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);
+      } else {
+        newSet.add(userId);
+      }
       return newSet;
     });
   };
@@ -116,7 +176,7 @@ function MainPage() {
       const methodMap = {
         block: 'POST',
         unblock: 'POST',
-        delete: 'DELETE' // Updated to match backend
+        delete: 'DELETE'
       };
 
       const userIdsArray = Array.from(selectedUserIds);
@@ -133,6 +193,9 @@ function MainPage() {
 
       setMessage(`Users ${action}ed successfully!`);
       setMessageType('success');
+      
+      // Clear selection after action
+      setSelectedUserIds(new Set());
       fetchUsers();
     } catch (err) {
       setMessage(err.message);
@@ -174,11 +237,27 @@ function MainPage() {
     return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
   };
 
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+    fetchUsers();
+  }, [isLoggedIn, navigate, fetchUsers]);
+
   if (!isLoggedIn) return null;
 
   return (
     <div className="card p-4 shadow-sm mt-4">
       <h2 className="mb-4">User Management</h2>
+
+      {/* Selected users indicator */}
+      {selectedUserIds.size > 0 && (
+        <div className="alert alert-info mb-3">
+          <i className="fas fa-info-circle me-2"></i>
+          {selectedUserIds.size} user{selectedUserIds.size !== 1 ? 's' : ''} selected
+        </div>
+      )}
 
       <Message type={messageType} message={message} />
       {error && <Message type="danger" message={error} />}
@@ -196,21 +275,21 @@ function MainPage() {
           <button
             className="btn btn-primary d-flex align-items-center"
             onClick={() => performAction('block')}
-            disabled={selectedUserIds.size === 0 || loading}
+            disabled={selectedUserIds.size === 0 || loading || fetchingAllIds}
           >
             <i className="fas fa-lock me-2"></i> Block
           </button>
           <button
             className="btn btn-info d-flex align-items-center"
             onClick={() => performAction('unblock')}
-            disabled={selectedUserIds.size === 0 || loading}
+            disabled={selectedUserIds.size === 0 || loading || fetchingAllIds}
           >
             <i className="fas fa-unlock-alt me-2"></i> Unblock
           </button>
           <button
             className="btn btn-danger d-flex align-items-center"
             onClick={() => performAction('delete')}
-            disabled={selectedUserIds.size === 0 || loading}
+            disabled={selectedUserIds.size === 0 || loading || fetchingAllIds}
           >
             <i className="fas fa-trash me-2"></i> Delete
           </button>
@@ -233,6 +312,7 @@ function MainPage() {
                 setPageNumber(1);
                 fetchUsers();
               }}
+              disabled={loading || fetchingAllIds}
             >
               <i className="fas fa-search" />
             </button>
@@ -241,6 +321,7 @@ function MainPage() {
             className="form-select"
             value={isBlockedFilter ?? ''}
             onChange={(e) => setIsBlockedFilter(e.target.value ? JSON.parse(e.target.value) : null)}
+            disabled={loading || fetchingAllIds}
           >
             <option value="">All Users</option>
             <option value="true">Blocked</option>
@@ -258,8 +339,21 @@ function MainPage() {
                   type="checkbox"
                   className="form-check-input"
                   onChange={handleSelectAll}
-                  checked={users.length > 0 && selectedUserIds.size === users.length}
+                  disabled={fetchingAllIds}
+                  checked={selectedUserIds.size > 0}
+                  ref={input => {
+                    if (input) {
+                      input.indeterminate = 
+                        selectedUserIds.size > 0 && 
+                        selectedUserIds.size < totalUsers;
+                    }
+                  }}
                 />
+                {fetchingAllIds && (
+                  <div className="spinner-border spinner-border-sm text-primary ms-2" role="status" style={{ position: 'absolute' }}>
+                    <span className="visually-hidden">Loading...</span>
+                  </div>
+                )}
               </th>
               <th 
                 style={{ cursor: 'pointer', minWidth: '150px' }}
@@ -296,6 +390,7 @@ function MainPage() {
                     className="form-check-input"
                     checked={selectedUserIds.has(user.id)}
                     onChange={() => handleSelectUser(user.id)}
+                    disabled={fetchingAllIds}
                   />
                 </td>
                 <td className="align-middle">{user.name || 'N/A'}</td>
@@ -324,14 +419,14 @@ function MainPage() {
           Showing {users.length} of {totalUsers} users
         </div>
         
-        {totalPages > 1 && (
+        {totalPages > 0 && (
           <nav>
             <ul className="pagination mb-0">
               <li className={`page-item ${pageNumber === 1 ? 'disabled' : ''}`}>
                 <button 
                   className="page-link" 
                   onClick={() => setPageNumber(prev => Math.max(1, prev - 1))}
-                  disabled={pageNumber === 1 || loading}
+                  disabled={pageNumber === 1 || loading || fetchingAllIds}
                 >
                   Previous
                 </button>
@@ -344,7 +439,7 @@ function MainPage() {
                   <button 
                     className="page-link" 
                     onClick={() => setPageNumber(i + 1)}
-                    disabled={loading}
+                    disabled={loading || fetchingAllIds}
                   >
                     {i + 1}
                   </button>
@@ -354,7 +449,7 @@ function MainPage() {
                 <button 
                   className="page-link" 
                   onClick={() => setPageNumber(prev => Math.min(totalPages, prev + 1))}
-                  disabled={pageNumber === totalPages || loading}
+                  disabled={pageNumber === totalPages || loading || fetchingAllIds}
                 >
                   Next
                 </button>
