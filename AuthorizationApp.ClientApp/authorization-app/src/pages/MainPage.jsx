@@ -71,14 +71,10 @@ function MainPage() {
 
       const data = await response.json();
       
-      // Filter out current user from the response
-      
-      setUsers(filteredUsers);
+      setUsers(data.items);
       setTotalPages(data.totalPages);
       
-      // Calculate total users excluding current user
-      const totalExcludingCurrent = user ? data.totalCount - 1 : data.totalCount;
-      setTotalUsers(totalExcludingCurrent);
+      setTotalUsers(data.totalCount);
     } catch (err) {
       setError(err.message || 'An error occurred while fetching users');
       console.error('Error fetching users:', err);
