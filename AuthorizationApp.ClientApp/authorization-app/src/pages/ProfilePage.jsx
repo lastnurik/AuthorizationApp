@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Message from '../components/Message';
 
 function ProfilePage() {
-  const { user, isLoggedIn, logout, authFetch } = useAuth();
+  const { user, isLoggedIn, logout, authFetch, fetchUserDetails } = useAuth();
   const navigate = useNavigate();
 
   const [name, setName] = useState('');
@@ -47,6 +47,8 @@ function ProfilePage() {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to update profile');
       }
+
+      await fetchUserDetails();
 
       setUserInfoMessage('Profile updated successfully!');
       setUserInfoMessageType('success');
